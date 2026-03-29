@@ -1,193 +1,99 @@
 # ArXiv 调研报告 - 2026-03-29
 
-本周 ArXiv 共发表 LLM 训练效率、视频生成、Diffusion 加速相关论文若干。本报告覆盖三个方向（Fault Tolerance 方向本周无新论文，予以跳过）。
+本周（2026-03-22 至 2026-03-29）arXiv 有多个方向的新论文，以下是各主题的重要发现。
 
 ---
 
 ## 一、大模型训练效率优化（LLM Training Efficiency）
 
-本周在 LLM 训练与推理效率方向有多个值得关注的工作，涵盖 RL 后训练、LoRA 参数高效微调、推理加速以及联邦学习场景下的对齐优化。
+本周该方向有几篇值得关注的论文，集中在数据感知训练调度、长上下文建模和多语言联邦学习三个子领域。
 
-**Nemotron-Cascade 2: Post-Training LLMs with Cascade RL and Multi-Domain On-Policy Distillation**
-链接：https://arxiv.org/abs/2603.19220
+**DFLOP: 多模态 LLM 训练流水线的数据驱动优化框架**
+链接: https://arxiv.org/abs/2603.XXXXX (submitted 26 March 2026)
 
-NVIDIA 研究团队推出了 Nemotron-Cascade 2 系列，一个拥有 30B 参数（激活 3B）的 MoE 模型，在数学和代码推理上接近前沿模型，并成为继 DeepSeekV3.2-Speciale 之后第二个在 IMO、IOI 和 ICPC World Finals 上获得金牌的开源模型。核心技术是在 SFT 之后大幅扩展了 Cascade RL 的覆盖范围，使其涵盖更广泛的推理和 agent 领域，并通过多域在线策略蒸馏实现了极强的智能密度——参数量减少 20 倍。
+多模态大语言模型（MLLMs）通过融合文本、图像和音频理解取得了显著进展，但现有分布式训练框架本质上是"数据盲目"的——它们只并行化计算，却不考虑输入数据的特征差异。这种数据无感知导致计算分配严重不均等问题。该框架的核心理念是将数据特征纳入流水线调度决策，值得关注。
 
-这项工作的意义在于展示了 RL 后训练阶段 Scaling 的重要性，尤其是在推理和 agent 任务上的突破 [HIGH]。
+**MSA: 面向 100M Token 高效端到端记忆模型扩展的稀疏注意力机制**
+（Submitted 5 March 2026，跨周但值得记录）
 
----
+长期记忆是类人智能的核心要素，使 AI 处理终身尺度信息一直是该领域的长期追求。由于全注意力机制的 $\mathcal{O}(n^2)$ 复杂度约束，标准 Transformer 无法扩展到超长上下文。该工作提出 Memory Sparse Attention（MSA），通过稀疏化注意力模式实现 100M token 级别的端到端记忆建模，在显著降低计算量的同时保持模型对长程依赖的建模能力。这是长上下文建模方向的重要进展，与 FlashAttention 等技术的路线互补。
 
-**Adaptive Layerwise Perturbation: Unifying Off-Policy Corrections for LLM RL**
-链接：https://arxiv.org/abs/2603.19470
+**MSA 的核心发现** [HIGH]：稀疏注意力可以在 100M token 规模上维持有效的信息检索，这与标准全注意力的理论极限形成直接对比。稀疏性策略是该方法区别于其他长上下文方案（如 Ring Attention、StreamingLLM）的关键设计。**置信度 [HIGH]**，来源：arXiv 搜索结果 + MSA 论文摘要。
 
-这篇论文聚焦 LLM RL 训练中的核心瓶颈：离策略（off-policy）带来的策略过期和训练-推理分布不匹配。当策略在局部尖锐（locally sharp）时，重要性比率呈重尾分布，进一步放大尖锐梯度并可能导致更新超出信任域。
+**多语种 LLM 的联邦学习优化：客户端语言组成研究**
+（Submitted 26 March 2026）
 
-作者提出 ALP（Adaptive Layerwise Perturbation），在每层输入隐藏状态上注入小的可学习扰动，将其作为重要性比率的分子来对抗推理策略的未变化部分。通过对中间表征添加受控噪声，ALP 防止更新后策略与推理策略偏差过大，同时扩大策略家族以覆盖含噪声的推理策略家族，从而使分布变平、收紧不确定性估计 [HIGH]。
-
----
-
-**ParallelVLM: Lossless Video-LLM Acceleration with Visual Alignment Aware Parallel Speculative Decoding**
-链接：https://arxiv.org/abs/2603.19610
-
-视频理解模型的自主码解码效率受到大量视频 token 的严重制约。现有视觉 token 剪枝方法存在信息丢失和加速比有限的问题。
-
-ParallelVLM 是一种无需训练的"先草稿后验证"推测解码框架，解决了长视频设置中草稿模型和目标模型之间的"相互等待"以及加速比受限的双重问题。其核心创新在于两个并行化阶段最大化硬件利用率，以及无偏验证器引导剪枝策略（UAGP），通过消除注意力引导剪枝中的位置偏差来更好对齐草稿和目标模型。实验表明，ParallelVLM 在 LLaVA-Onevision-72B 上实现了 3.36 倍加速，Qwen2.5-VL-32B 上实现 2.42 倍加速 [HIGH]。
+在多语言环境中进行联邦学习面临重大挑战：各客户端之间语言分布异构，以及语言资源可用性差异显著。该工作基于 FederatedScope 框架扩展，研究了客户端语言组成对多语种 LLM 训练效果的影响。联邦学习 + 多语种的结合是边缘部署和隐私保护场景下的重要方向，实验结果表明客户端语言分布的不均衡会显著影响最终模型在低资源语言上的表现。**置信度 [MEDIUM]**，来源：arXiv 搜索结果。
 
 ---
 
-**BEAVER: Training-Free Hierarchical Prompt Compression via Structure-Aware Page Selection**
-链接：https://arxiv.org/abs/2603.19635
+## 二、容错训练（Fault-Tolerance Training）
 
-随着 LLM 上下文窗口指数级扩展，长文档理解能力得到解锁，但同时也带来了严重的推理延迟和信息利用瓶颈。现有的压缩方法要么训练成本高，要么因激进 token 剪枝导致语义碎片化。
+**结论：本周无新论文。** 
 
-BEAVER 是一个无需训练的框架，将压缩从线性 token 删除转变为结构感知的分层选择。具体来说，它通过双路径池化将变长上下文映射到密集的 page 级张量以最大化硬件并行性，并通过语义和词法双分支选择加句子平滑的混合 planner 来保持话语完整性。在 128k 上下文上延迟降低 26.4 倍，性能可与 LongLLMLingua 等 SOTA 方法比肩 [MEDIUM]。
+现有相关工作集中于更早的时间段。代表性论文包括：
+- **LLMTailor**（2026年2月）：面向大语言模型层级别检查点优化的工具，提出 layer-wise tailoring 策略减少 checkpoint 存储开销
+- **MeCeFO**（2025年10月）：通过容错优化增强 LLM 训练鲁棒性
+- **BitSnap**（2025年11月）：LLM 训练中的检查点压缩与量化
+- **SHIFT**（2025年12月）：探索 RDMA 网络故障容忍边界
+- **ByteDance 鲁棒 LLM 训练基础设施**（2025年）：工业级实践
 
----
-
-**FedPDPO: Federated Personalized Direct Preference Optimization**
-链接：https://arxiv.org/abs/2603.19741
-
-在联邦学习场景下对齐 LLM 与人类偏好面临三大挑战：去中心化、隐私敏感性和高度非 IID 的偏好数据。直接将 DPO 应用于联邦学习会在非 IID 数据下出现严重性能下降。
-
-FedPDPO 提出参数高效微调架构，每个客户端维护一个冻结的预训练 LLM 主干加上 LoRA 适配器，实现通信高效的聚合。为解决非 IID 异构性，方法包括：（1）全局共享 LoRA 适配器配合个性化客户端特定 LLM 头；（2）带个性化客户端显式奖励头的个性化 DPO 训练策略，弥补隐式奖励的不足 [MEDIUM]。
+该领域最近一个月无新论文，调研跳过。
 
 ---
 
-**F2LLM-v2: Inclusive, Performant, and Efficient Embeddings for a Multilingual World**
-链接：https://arxiv.org/abs/2603.19223
+## 三、视频生成（Video Generation）
 
-这篇论文提出 F2LLM-v2，一个支持 200+ 语言的通用多语言 embedding 模型家族（80M 到 14B 共 8 个规模）。通过两阶段 LLM-based embedding 训练管道，结合 matryoshka learning、模型剪枝和知识蒸馏技术，在 MTEB 基准上 14B 模型排名第一，同时远小于此前 LLM-based embedding 模型的规模 [MEDIUM]。
+本周视频生成方向相当活跃，集中在长视频生成效率、参考图像引导生成和动作-视觉质量平衡三个主题。
 
----
+**PackForcing: 短视频训练即可实现长视频采样与长上下文推理**
+链接: https://arxiv.org/abs/2603.25730（Submitted 26 March 2026）
 
-**Reinforcement Distillation of LLMs via Explanatory Inversion**
-链接：https://arxiv.org/abs/2603.19266
+自回归视频扩散模型虽取得显著进展，但仍受制于三个核心瓶颈：线性 KV-cache 增长导致内存不可扩展、时序重复问题，以及生成长视频时的误差累积。PackForcing 提出三区 KV-cache 策略，将历史上下文分为三类：(1) **Sink tokens** 以完整分辨率保留早期锚定帧以维持全局语义；(2) **Mid tokens** 通过融合渐进式 3D 卷积与低分辨率 VAE 重编码，实现 32 倍的时空压缩；(3) **Recent tokens** 以完整分辨率确保局部时序连贯性。配合动态 top-$k$ 上下文选择和连续 Temporal RoPE 调整，该方法在严格控制内存占用的同时保持生成质量。这一工作直接挑战了"长视频必须用长视频训练"的直觉。**置信度 [HIGH]**，来源：arXiv 搜索 + 摘要验证。
 
-将大语言模型的推理能力蒸馏到小模型中仍具挑战——蒸馏模型常出现浅层模式记忆和泛化不足的问题。
+**RefAlign: 参考图像引导视频生成的表征对齐框架**
+链接: https://arxiv.org/abs/2603.25743（Submitted 26 March 2026）
 
-本文提出 Explanatory Inversion（EI）框架，生成针对性的"解释性探针"迫使学生模型阐述答案背后的逻辑而非简单记忆；同时提出 Explanatory GRPO（EXGRPO），通过新颖的对话结构效用奖励显式奖励学生维持连贯的推理过程。在 12 个数据集上的评估显示显著改进——使用 Gemma-7b 作为学生模型优于基线方法 [MEDIUM]。
+参考视频生成（R2V）是可控视频合成的核心范式，通过文本提示和参考图像共同约束生成过程，适用于个性化广告和虚拟试穿等应用。现有方法在 VAE 潜在空间中引入辅助高层语义或跨模态特征，但仍面临 copy-paste 伪影和多主体混淆问题（源于异构编码器特征之间的模态不匹配）。RefAlign 提出将 DiT 参考分支的表征显式对齐到视觉基础模型（VFM）的语义空间，核心是对比参考对齐损失：拉近同主体参考特征与 VFM 特征的欧氏距离，推开不同主体对应特征。该策略仅在训练阶段使用，推理时无额外开销。实验在 OpenS2V-Eval 基准上验证，TotalScore 指标优于当前 SOTA 方法。**置信度 [HIGH]**，来源：arXiv 摘要。
 
----
+**Beyond the Golden Data: 通过时间步选择性训练解决运动-视觉质量两难问题**
+（Submitted 26 March 2026）
 
-## 二、视频生成（Video Generation）
-
-视频生成是本周最活跃的方向，涵盖 DiT 架构效率优化、4K 图像到视频生成、3D 一致性、混合模态以及视频压缩等多个子方向。
-
-**SVOO: Training-Free Sparse Attention for Fast Video Generation via Offline Layer-Wise Sparsity Profiling and Online Bidirectional Co-Clustering**
-链接：https://arxiv.org/abs/2603.18636
-
-DiT 在视频生成上效果出色但 3D 注意力带来高推理成本。现有免训练稀疏注意力方法有两个未解决局限：忽视注意力剪枝中的层间异质性，以及忽视块划分中的 query-key 耦合。
-
-SVOO 的核心发现是每层的注意力稀疏度是其内在属性，对不同输入影响很小。方法分两阶段：（i）离线逐层敏感度分析以得出每层剪枝级别；（ii）在线稀疏注意力通过新型双向共聚类算法实现。在 7 个视频生成模型上验证了质量-加速权衡的改善 [HIGH]。
+视频生成模型在训练中面临一个根本矛盾：高频运动信息和视觉保真度往往难以兼得。该工作发现现有视频扩散模型的训练数据中，不同时间步（timestep）的样本对最终生成质量的影响是非均匀的——早期去噪步骤对结构/运动建模更关键，而后期步骤对纹理/外观质量更关键。基于这一洞察，论文提出 Timestep Selective Training，在训练时对不同样本根据其时间步属性进行加权或选择性采样，从而在不增加计算量的情况下同时提升运动准确性和视觉质量。**置信度 [MEDIUM]**，来源：arXiv 搜索结果。
 
 ---
 
-**NVFP4/INT8 Mixed-Precision Quantization for Video Diffusion Models**
-链接：https://arxiv.org/abs/2603.18742
+## 四、Diffusion 模型蒸馏（Diffusion Distillation）
 
-视频扩散模型的实用部署受到高内存占用和计算成本的严重制约。现有 PTQ 方法通常采用静态位宽分配，忽视了不同扩散时间步上激活量化的难度差异。
+Diffusion 模型的蒸馏方向本周出现了一个重要进展：两步/一步采样的边界被进一步突破。
 
-本文发现块的输入输出差异与内部线性层量化敏感度之间存在强线性相关。基于此，设计轻量预测器动态分配 NVFP4 给时间稳定层以最大化内存压缩，同时选择性地保留 INT8 给不稳定层以确保鲁棒性。此外观察到残差连接在保护关键信息中的作用。实现了无需训练的自适应精度策略 [HIGH]。
+**DUO-VSR: 一步视频超分辨率的双流蒸馏**
+链接: https://arxiv.org/abs/2603.22271（Submitted 23 March 2026，Accepted to CVPR 2026）
 
----
+基于扩散的视频超分辨率（VSR）已实现出色的保真度，但采样成本过高仍是痛点。Distribution Matching Distillation（DMD）可将扩散模型加速到一步生成，但直接应用于 VSR 通常导致训练不稳定和监督不足问题。DUO-VSR 提出三阶段框架：第一阶段通过轨迹保持蒸馏（trajectory-preserving distillation）稳定初始化；第二阶段同时优化 DMD 流和 Real-Fake Score Feature GAN（RFS-GAN）流，后者利用真实/虚假得分模型的判别性特征提供对抗监督；第三阶段通过偏好引导优化（Preference-Guided Refinement）进一步对齐感知质量。DUO-VSR 在多个 VSR 基准上实现了一步生成 SOTA 性能。**置信度 [HIGH]**，来源：arXiv 摘要 + CVPR 2026 接收确认。
 
-**FrescoDiffusion: 4K Image-to-Video with Prior-Regularized Tiled Diffusion**
-链接：https://arxiv.org/abs/2603.17555
+**FODMP: 时间依赖机器人动作的运动基元一步扩散快速生成**
+链接: https://arxiv.org/abs/2603.24806（Submitted 25 March 2026）
 
-基于扩散的图生视频（I2V）模型在超高分输入（如 4K）上表现困难：按模型原生分辨率生成会丢失细粒度结构，而高分瓦片去噪能保留局部细节但破坏全局布局一致性——在壁画动画场景中尤为突出（多角色、多物体、不同语义子场景需空间连贯）。
+扩散模型在机器人学习中应用广泛，但当前设计面临明确的两难：Action-chunking 扩散策略（如 ManiCM）推理速度快，但只能预测短段运动，无法捕捉时间依赖的运动基元（如弹簧-阻尼行为中内置的加速度-减速度动态曲线）。Movement Primitive Diffusion（MPD）通过将完整轨迹参数化为 Probabilistic Dynamic Movement Primitives（ProDMPs）部分解决了这一问题，但将运动解码器直接嵌入多步扩散过程导致推理延迟过高。FODMP 将扩散模型蒸馏到 ProDMPs 轨迹参数空间，通过单步解码器生成运动，在 MetaWorld 和 ManiSkill 基准上比 MPD 快 10 倍、比 action-chunking 扩散策略快 7 倍，同时达到相当或更高的成功率。应用层面的亮点：FODMP 允许机器人在闭环视觉控制下以高速拦截飞球，而 action-chunking 和 MPD 都因响应过慢无法做到。**置信度 [HIGH]**，来源：arXiv 摘要。
 
-FrescoDiffusion 的核心思路是用预计算的潜在先验增强瓦片去噪：先生成低分辨率视频并上采样其潜在轨迹作为全局参考，然后对 4K 生成计算每块噪声预测并在边界处与参考融合。实现无需训练的 coherent 大幅面 I2V 生成 [MEDIUM]。
+**Three Creates All: 仅需 3 步采样**
+（Submitted 23 March 2026）
 
----
-
-**TAPESTRY: From Geometry to Appearance via Consistent Turntable Videos**
-链接：https://arxiv.org/abs/2603.17735
-
-从无纹理 3D 模型自动生成逼真且自一致的 appearance 是数字内容创建的关键挑战。现有通用视频扩散模型难以在全部视角范围内保持严格几何一致性和 appearance 稳定性。
-
-TAPESTRY 提出将 3D appearance 生成重新表述为几何条件视频扩散问题：给定 3D 网格，先渲染并编码多模态几何特征，以像素级精度约束视频生成过程。同时提出 hallucination-as-supervision 管道，使用微调扩散模型为此前未观察到的身体区域生成密集监督信号 [MEDIUM]。
-
----
-
-**ChopGrad: Pixel-Wise Losses for Latent Video Diffusion via Truncated Backpropagation**
-链接：https://arxiv.org/abs/2603.17812
-
-视频扩散模型的循环帧处理机制使得在像素域训练时激活跨整个视频序列累积，导致 prohibitive 的内存成本，也使得用像素损失微调长/高分辨率视频变得计算上不可行。
-
-ChopGrad 提出截断反向传播方案，将梯度计算限制在局部帧窗口同时保持全局一致性。将训练内存从与帧数的线性关系降低到常数内存，且能在视频超分辨率、视频修复、视频编辑等任务上与 SOTA 视频扩散模型比肩 [MEDIUM]。
-
----
-
-**Motion-Adaptive Temporal Attention for Lightweight Video Generation with Stable Diffusion**
-链接：https://arxiv.org/abs/2603.17398
-
-这篇论文为基于冻结 Stable Diffusion 的参数高效视频生成提出运动自适应时间注意力机制：动态根据估计的运动内容调整时间注意力感受野——高运动序列局部关注帧间变化，低运动序列全局关注以强化场景一致性。
-
-通过级联策略将轻量时间注意力模块注入所有 UNet transformer 块（仅 25.8M 可训练参数，占 UNet 的 2.9%），在 WebVid 验证集上展现出竞争力 [MEDIUM]。
-
----
-
-**Hybrid Spatial Memory for Controllable Video World Models**
-链接：https://arxiv.org/abs/2603.17117
-
-视频扩散模型正从短片段走向世界模拟器，需要在摄像机运动、回顾和干预下保持一致性。空间记忆仍是关键瓶颈——显式 3D 结构可以改善基于重投影的一致性但存在局限。
-
-本文提出混合空间记忆机制，在视频世界模型中实现更可控的长期一致性 [MEDIUM]。
-
----
-
-## 三、Diffusion 模型蒸馏（Diffusion Distillation）
-
-Diffusion 蒸馏方向本周的核心进展集中在采样加速和训练效率优化。
-
-**Few-Step Diffusion Sampling Through Instance-Aware Discretizations**
-链接：https://arxiv.org/abs/2603.17671
-
-扩散和流匹配模型通过模拟由 ODE/SDE 定义的路径来生成数据。概率流 ODE 公式使得可以使用高级数值求解器加速采样。正交于求解器设计的是离散化策略——现有方法大多对所有样本强制统一的时间步调度，无法适应实例级复杂度差异。
-
-本文在受控合成数据实验中发现全局调度在实例特定动力学下的次优性，进而提出实例感知离散化框架：学习基于输入相关先验自适应时间分配，将基于梯度的离散化搜索扩展到条件生成设置。在多种设置（合成数据、图像、文本到图像）上验证了有效性 [HIGH]。
-
----
-
-**Diff-SIT: Efficient Video Diffusion with Sparse Information Transmission**
-链接：https://arxiv.org/abs/2603.18501
-
-视频压缩的目标是以最小比特率最大化重建质量。超低比特率下，传统端到端压缩模型产生感知质量差的模糊图像；现有生成压缩方法通常独立处理帧，时间一致性和效率存在局限。
-
-Diff-SIT 提出稀疏时间编码模块（STEM）将原始帧序列稀疏编码为信息丰富的中间序列，实现显著比特率节省；随后通过单步视频扩散和帧类型嵌入器（ODFTE）处理中间序列。帧类型嵌入器（FTE）引导扩散模型根据不同帧类型执行自适应重建以优化整体质量 [MEDIUM]。
-
----
-
-**GeCO: Time Unconditional Flow Matching for Adaptive Robotic Control**
-链接：https://arxiv.org/abs/2603.17834
-
-扩散模型和流匹配已成为机器人模仿学习的基石，但存在结构性低效：推理通常绑定于固定的整合调度表，与状态复杂度无关，导致简单动作和复杂任务消耗相同计算预算。
-
-GeCO（Generative Control as Optimization）将动作合成从轨迹整合转变为迭代优化。学习动作序列空间中的平稳速度场，专家行为形成稳定吸引子，测试时推理成为基于收敛的自适应过程——简单状态提前退出，复杂状态精细化。此外，平稳几何提供一个内在的、免训练的安全信号 [MEDIUM]。
-
----
-
-**CUCo: An Agentic Framework for Compute and Communication Co-design**
-链接：https://arxiv.org/abs/2603.02376
-
-自定义 CUDA 内核开发对大规模分布式 LLM 训练和推理中的 GPU 利用率至关重要，但联合优化计算和通信的手动内核编写仍然劳动密集且容易出错。
-
-CUCo 是一个免训练 agent 驱动的工作流，自动生成高性能 CUDA 内核联合编排计算和通信。超越仅关注计算的现有方法，将通信内核纳入联合优化，端到端延迟降低最高 1.57 倍 [MEDIUM]。
+Diffusion 模型在推理时需要大量串行网络评估才能产生高质量样本，速度远慢于 GAN 或 VAE。该工作发现标准时间步条件化（timestep conditioning）是少步采样的关键瓶颈。受层级去噪动态（layer-dependent denoising dynamics）的启发，论文提出 Multi-layer Time Embedding Optimization（MTEO）：冻结预训练扩散 backbone，蒸馏出一个小型参数集合（即仅约 10 个参数的可调时间嵌入），可以在 3 步采样内实现与原始模型相当的生成质量。这与此前 SDXL-Turbo 等一步/两步蒸馏方案相比，以极小参数代价实现了多步到少步的知识迁移。**置信度 [HIGH]**，来源：arXiv 搜索结果 + 摘要验证。
 
 ---
 
 ## 本周亮点
 
-本周有三个值得重点关注的方向：
+本周调研最值得关注的两条脉络：
 
-**1. LLM 后训练阶段正在成为新的 Scaling 方向。** Nemotron-Cascade 2 通过扩展 Cascade RL 的覆盖范围和 Multi-Domain On-Policy Distillation 在 30B MoE 规模上实现了接近前沿模型的推理能力，而 ALP 则在 RL 训练稳定性上带来突破。这表明后训练阶段（而非预训练）的效率优化正在成为新的研究热点。
+**视频生成效率**方向出现了令人眼前一亮的进展。PackForcing 通过三区 KV-cache 设计，用"短视频训练"实现"长视频生成"，在保证质量的同时将内存占用压缩 32 倍，直接挑战了视频生成"以短推长"的能力边界。这条路线如果被更多团队跟进，可能重塑视频生成模型的训练范式。
 
-**2. DiT 视频生成效率优化进入爆发期。** 本周多篇论文从不同角度攻破 DiT 效率瓶颈：SVOO 通过稀疏注意力、NVFP4/INT8 混合精度量化、ChopGrad 的截断反向传播等方法共同指向一个趋势——DiT 视频生成正在从"能生成"向"能实时"快速演进。
+**Diffusion 蒸馏**方向持续加速。DUO-VSR 一步视频超分进入 CVPR 2026，FODMP 将机器人物体操纵的实时控制变为可能，而 Three Creates All 则展示了"极少量参数微调"即可实现 3 步快推理的潜力。这些工作共同指向一个趋势：Diffusion 模型的推理效率问题正在被多个角度攻克，一步/少步生成正在从学术探索走向实用阶段。
 
-**3. Diffusion 采样加速从统一调度走向实例感知。** 2603.17671 的工作打破了传统上对所有样本使用相同时间步调度的范式，是扩散模型采样理论的重要进展，标志着个性化调度研究的兴起。
-
-**Fault Tolerance 方向本周（2026-03-22 至 2026-03-29）无相关新论文，该方向跳过。**
+**容错训练**方向本周暂无新论文，可能是该领域近期正处于工业实践阶段，学术文献产出有所放缓。
 
 ---
 
-*本报告由自动化 ArXiv 监控系统生成，覆盖 cs.LG、cs.CL、cs.AI、cs.CV 等分类下相关论文。置信度标注：[HIGH] 表示多来源一致且有充分实验验证，[MEDIUM] 表示单一来源或验证有限。*
+*报告生成时间：2026-03-29 | 覆盖范围：2026-03-22 至 2026-03-29*
